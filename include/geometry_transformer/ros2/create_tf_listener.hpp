@@ -32,7 +32,7 @@ inline tf2_ros::TransformListener create_tf_listener(
   return tf2_ros::TransformListener(
     tf_buffer, // tf buffer
     node, // node pointer
-    false, // spin_thread
+    true, // spin_thread
     tf2_ros::DynamicListenerQoS(), // qos(dynamic)
     tf2_ros::StaticListenerQoS(), // static qos
     tf2_ros::detail::get_default_transform_listener_sub_options<AllocatorT>(), // sub_options(dynamic)
