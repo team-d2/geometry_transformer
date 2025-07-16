@@ -20,6 +20,7 @@
 #include <string>
 #include <utility>
 
+#include "create_tf_listener.hpp"
 #include "nav_msgs/msg/path.hpp"
 #include "rclcpp/rclcpp.hpp"
 #include "tf2/LinearMath/Transform.hpp"
@@ -47,7 +48,7 @@ public:
   : rclcpp::Node(node_name, node_namespace, options),
     frame_id_(this->declare_parameter("frame_id", std::string("map"))),
     tf_buffer_(this->get_clock()),
-    tf_listener_(tf_buffer_, this),
+    tf_listener_(create_tf_listener(this, tf_buffer_)),
     path_frame_changed_publisher_(this->create_path_frame_changed_publisher()),
     path_subscription_(this->create_path_subscription())
   {

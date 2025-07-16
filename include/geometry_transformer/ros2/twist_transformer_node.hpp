@@ -19,6 +19,7 @@
 #include <string>
 #include <utility>
 
+#include "create_tf_listener.hpp"
 #include "geometry_msgs/msg/twist_stamped.hpp"
 #include "rclcpp/rclcpp.hpp"
 #include "tf2/LinearMath/Transform.hpp"
@@ -47,7 +48,7 @@ public:
     frame_id_(this->declare_parameter("frame_id", std::string("map"))),
     only_rotation_(this->declare_parameter<bool>("only_rotation", false)),
     tf_buffer_(this->get_clock()),
-    tf_listener_(tf_buffer_, this),
+    tf_listener_(create_tf_listener(this, tf_buffer_)),
     twist_frame_changed_publisher_(this->create_twist_frame_changed_publisher()),
     twist_raw_transformed_publisher_(
       this->declare_parameter("publish_raw",

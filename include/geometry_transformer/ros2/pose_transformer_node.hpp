@@ -19,6 +19,7 @@
 #include <string>
 #include <utility>
 
+#include "create_tf_listener.hpp"
 #include "geometry_msgs/msg/pose_stamped.hpp"
 #include "rclcpp/rclcpp.hpp"
 #include "tf2/LinearMath/Transform.hpp"
@@ -46,7 +47,7 @@ public:
   : rclcpp::Node(node_name, node_namespace, options),
     frame_id_(this->declare_parameter("frame_id", std::string("map"))),
     tf_buffer_(this->get_clock()),
-    tf_listener_(tf_buffer_, this),
+    tf_listener_(create_tf_listener(this, tf_buffer_)),
     pose_frame_changed_publisher_(this->create_pose_frame_changed_publisher()),
     pose_raw_transformed_publisher_(
       this->declare_parameter("publish_raw",
