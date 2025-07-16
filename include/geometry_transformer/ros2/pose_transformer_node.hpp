@@ -34,6 +34,7 @@ namespace geometry_transformer::ros2
 class PoseTransformerNode : public rclcpp::Node
 {
   using PoseMsg = geometry_msgs::msg::PoseStamped;
+  using PoseRawMsg = geometry_msgs::msg::Pose;
 
 public:
   static constexpr auto kDefaultNodeName = "pose_transformer";
@@ -47,6 +48,10 @@ public:
     tf_buffer_(this->get_clock()),
     tf_listener_(tf_buffer_, this),
     pose_frame_changed_publisher_(this->create_pose_frame_changed_publisher()),
+    pose_raw_transformed_publisher_(
+      this->declare_parameter("publish_raw",
+      false) ? this->create_pose_raw_transformed_publisher() :
+      nullptr),
     pose_subscription_(this->create_pose_subscription())
   {
   }
@@ -74,6 +79,16 @@ private:
       rclcpp::QosPolicyKind::Depth, rclcpp::QosPolicyKind::Durability,
       rclcpp::QosPolicyKind::History, rclcpp::QosPolicyKind::Reliability};
     return this->create_publisher<PoseMsg>("pose/transformed", rclcpp::QoS(10), publisher_options);
+  }
+
+  rclcpp::Publisher<PoseRawMsg>::SharedPtr create_pose_raw_transformed_publisher()
+  {
+    rclcpp::PublisherOptions publisher_options;
+    publisher_options.qos_overriding_options = {
+      rclcpp::QosPolicyKind::Depth, rclcpp::QosPolicyKind::Durability,
+      rclcpp::QosPolicyKind::History, rclcpp::QosPolicyKind::Reliability};
+    return this->create_publisher<PoseRawMsg>(
+      "pose_raw/transformed", rclcpp::QoS(10), publisher_options);
   }
 
   rclcpp::Subscription<PoseMsg>::SharedPtr create_pose_subscription()
@@ -126,6 +141,7 @@ private:
 
   // donkey_fix publisher
   rclcpp::Publisher<PoseMsg>::SharedPtr pose_frame_changed_publisher_;
+  rclcpp::Publisher<PoseRawMsg>::SharedPtr pose_raw_transformed_publisher_;
 
   // donkey_gps subscription
   rclcpp::Subscription<PoseMsg>::SharedPtr pose_subscription_;

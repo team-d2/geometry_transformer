@@ -34,6 +34,7 @@ namespace geometry_transformer::ros2
 class TwistTransformerNode : public rclcpp::Node
 {
   using TwistMsg = geometry_msgs::msg::TwistStamped;
+  using TwistRawMsg = geometry_msgs::msg::Twist;
 
 public:
   static constexpr auto kDefaultNodeName = "twist_transformer";
@@ -48,6 +49,10 @@ public:
     tf_buffer_(this->get_clock()),
     tf_listener_(tf_buffer_, this),
     twist_frame_changed_publisher_(this->create_twist_frame_changed_publisher()),
+    twist_raw_transformed_publisher_(
+      this->declare_parameter("publish_raw",
+      false) ? this->create_twist_raw_transformed_publisher() :
+      nullptr),
     twist_subscription_(this->create_twist_subscription())
   {
   }
@@ -76,6 +81,16 @@ private:
       rclcpp::QosPolicyKind::History, rclcpp::QosPolicyKind::Reliability};
     return this->create_publisher<TwistMsg>(
       "twist/transformed", rclcpp::QoS(10), publisher_options);
+  }
+
+  rclcpp::Publisher<TwistRawMsg>::SharedPtr create_twist_raw_transformed_publisher()
+  {
+    rclcpp::PublisherOptions publisher_options;
+    publisher_options.qos_overriding_options = {
+      rclcpp::QosPolicyKind::Depth, rclcpp::QosPolicyKind::Durability,
+      rclcpp::QosPolicyKind::History, rclcpp::QosPolicyKind::Reliability};
+    return this->create_publisher<TwistRawMsg>(
+      "twist_raw/transformed", rclcpp::QoS(10), publisher_options);
   }
 
   rclcpp::Subscription<TwistMsg>::SharedPtr create_twist_subscription()
@@ -126,6 +141,17 @@ private:
 
     // publish the twist in the target frame
     twist_frame_changed_publisher_->publish(std::move(twist_transformed_msg));
+
+    // if raw twist is requested, publish the raw transformed twist
+    if (twist_raw_transformed_publisher_) {
+      // create a new TwistRawMsg with the raw twist in the target frame
+      auto twist_raw_transformed_msg = std::make_unique<TwistRawMsg>();
+      twist_raw_transformed_msg->linear = tf2::toMsg(twist_relative_linear_vec);
+      twist_raw_transformed_msg->angular = tf2::toMsg(twist_relative_angular_vec);
+
+      // publish the raw twist in the target frame
+      twist_raw_transformed_publisher_->publish(std::move(twist_raw_transformed_msg));
+    }
   }
 
   // parameter
@@ -138,6 +164,7 @@ private:
 
   // donkey_fix publisher
   rclcpp::Publisher<TwistMsg>::SharedPtr twist_frame_changed_publisher_;
+  rclcpp::Publisher<TwistRawMsg>::SharedPtr twist_raw_transformed_publisher_;
 
   // donkey_gps subscription
   rclcpp::Subscription<TwistMsg>::SharedPtr twist_subscription_;
