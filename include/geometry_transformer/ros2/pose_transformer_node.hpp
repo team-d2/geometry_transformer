@@ -48,11 +48,7 @@ public:
     frame_id_(this->declare_parameter("frame_id", std::string("map"))),
     tf_buffer_(this->get_clock()),
     tf_listener_(create_tf_listener(this, tf_buffer_)),
-    pose_frame_changed_publisher_(this->create_pose_frame_changed_publisher()),
-    pose_raw_transformed_publisher_(
-      this->declare_parameter("publish_raw",
-      false) ? this->create_pose_raw_transformed_publisher() :
-      nullptr),
+    pose_transformed_publisher_(this->create_pose_transformed_publisher()),
     pose_subscription_(this->create_pose_subscription())
   {
   }
@@ -73,23 +69,13 @@ public:
   ~PoseTransformerNode() override {}
 
 private:
-  rclcpp::Publisher<PoseMsg>::SharedPtr create_pose_frame_changed_publisher()
+  rclcpp::Publisher<PoseMsg>::SharedPtr create_pose_transformed_publisher()
   {
     rclcpp::PublisherOptions publisher_options;
     publisher_options.qos_overriding_options = {
       rclcpp::QosPolicyKind::Depth, rclcpp::QosPolicyKind::Durability,
       rclcpp::QosPolicyKind::History, rclcpp::QosPolicyKind::Reliability};
     return this->create_publisher<PoseMsg>("pose/transformed", rclcpp::QoS(10), publisher_options);
-  }
-
-  rclcpp::Publisher<PoseRawMsg>::SharedPtr create_pose_raw_transformed_publisher()
-  {
-    rclcpp::PublisherOptions publisher_options;
-    publisher_options.qos_overriding_options = {
-      rclcpp::QosPolicyKind::Depth, rclcpp::QosPolicyKind::Durability,
-      rclcpp::QosPolicyKind::History, rclcpp::QosPolicyKind::Reliability};
-    return this->create_publisher<PoseRawMsg>(
-      "pose_raw/transformed", rclcpp::QoS(10), publisher_options);
   }
 
   rclcpp::Subscription<PoseMsg>::SharedPtr create_pose_subscription()
@@ -99,11 +85,11 @@ private:
       rclcpp::QosPolicyKind::Depth, rclcpp::QosPolicyKind::Durability,
       rclcpp::QosPolicyKind::History, rclcpp::QosPolicyKind::Reliability};
     return this->create_subscription<PoseMsg>(
-      "pose", rclcpp::QoS(10), [this](PoseMsg::ConstSharedPtr msg) {this->grant(std::move(msg));},
+      "pose", rclcpp::QoS(10), [this](PoseMsg::ConstSharedPtr msg) {this->transform(std::move(msg));},
       subscription_options);
   }
 
-  void grant(PoseMsg::ConstSharedPtr pose_msg)
+  void transform(PoseMsg::ConstSharedPtr pose_msg)
   {
     geometry_msgs::msg::TransformStamped pose_base_tf_msg;
     try {
@@ -130,7 +116,7 @@ private:
     tf2::toMsg(pose_tf, pose_transformed_msg->pose);
 
     // publish the pose in the target frame
-    pose_frame_changed_publisher_->publish(std::move(pose_transformed_msg));
+    pose_transformed_publisher_->publish(std::move(pose_transformed_msg));
   }
 
   // parameter
@@ -140,11 +126,10 @@ private:
   tf2_ros::Buffer tf_buffer_;
   tf2_ros::TransformListener tf_listener_;
 
-  // donkey_fix publisher
-  rclcpp::Publisher<PoseMsg>::SharedPtr pose_frame_changed_publisher_;
-  rclcpp::Publisher<PoseRawMsg>::SharedPtr pose_raw_transformed_publisher_;
+  // transformed publisher
+  rclcpp::Publisher<PoseMsg>::SharedPtr pose_transformed_publisher_;
 
-  // donkey_gps subscription
+  // original subscription
   rclcpp::Subscription<PoseMsg>::SharedPtr pose_subscription_;
 };
 

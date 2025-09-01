@@ -49,7 +49,7 @@ public:
     frame_id_(this->declare_parameter("frame_id", std::string("map"))),
     tf_buffer_(this->get_clock()),
     tf_listener_(create_tf_listener(this, tf_buffer_)),
-    path_frame_changed_publisher_(this->create_path_frame_changed_publisher()),
+    path_transformed_publisher_(this->create_path_transformed_publisher()),
     path_subscription_(this->create_path_subscription())
   {
   }
@@ -70,7 +70,7 @@ public:
   ~PathTransformerNode() override {}
 
 private:
-  rclcpp::Publisher<PathMsg>::SharedPtr create_path_frame_changed_publisher()
+  rclcpp::Publisher<PathMsg>::SharedPtr create_path_transformed_publisher()
   {
     rclcpp::PublisherOptions publisher_options;
     publisher_options.qos_overriding_options = {
@@ -145,7 +145,7 @@ private:
     }
 
     // publish the path in the target frame
-    path_frame_changed_publisher_->publish(std::move(path_transformed_msg));
+    path_transformed_publisher_->publish(std::move(path_transformed_msg));
   }
 
   // parameter
@@ -155,10 +155,10 @@ private:
   tf2_ros::Buffer tf_buffer_;
   tf2_ros::TransformListener tf_listener_;
 
-  // donkey_fix publisher
-  rclcpp::Publisher<PathMsg>::SharedPtr path_frame_changed_publisher_;
+  // transformed publisher
+  rclcpp::Publisher<PathMsg>::SharedPtr path_transformed_publisher_;
 
-  // donkey_gps subscription
+  // original subscription
   rclcpp::Subscription<PathMsg>::SharedPtr path_subscription_;
 };
 

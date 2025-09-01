@@ -49,7 +49,7 @@ public:
     only_rotation_(this->declare_parameter<bool>("only_rotation", false)),
     tf_buffer_(this->get_clock()),
     tf_listener_(create_tf_listener(this, tf_buffer_)),
-    twist_frame_changed_publisher_(this->create_twist_frame_changed_publisher()),
+    twist_transformed_publisher_(this->create_twist_transformed_publisher()),
     twist_raw_transformed_publisher_(
       this->declare_parameter("publish_raw",
       false) ? this->create_twist_raw_transformed_publisher() :
@@ -74,7 +74,7 @@ public:
   ~TwistTransformerNode() override {}
 
 private:
-  rclcpp::Publisher<TwistMsg>::SharedPtr create_twist_frame_changed_publisher()
+  rclcpp::Publisher<TwistMsg>::SharedPtr create_twist_transformed_publisher()
   {
     rclcpp::PublisherOptions publisher_options;
     publisher_options.qos_overriding_options = {
@@ -141,7 +141,7 @@ private:
     twist_transformed_msg->twist.angular = tf2::toMsg(twist_angular_vec);
 
     // publish the twist in the target frame
-    twist_frame_changed_publisher_->publish(std::move(twist_transformed_msg));
+    twist_transformed_publisher_->publish(std::move(twist_transformed_msg));
 
     // if raw twist is requested, publish the raw transformed twist
     if (twist_raw_transformed_publisher_) {
@@ -163,11 +163,11 @@ private:
   tf2_ros::Buffer tf_buffer_;
   tf2_ros::TransformListener tf_listener_;
 
-  // donkey_fix publisher
-  rclcpp::Publisher<TwistMsg>::SharedPtr twist_frame_changed_publisher_;
+  // transformed publisher
+  rclcpp::Publisher<TwistMsg>::SharedPtr twist_transformed_publisher_;
   rclcpp::Publisher<TwistRawMsg>::SharedPtr twist_raw_transformed_publisher_;
 
-  // donkey_gps subscription
+  // original subscription
   rclcpp::Subscription<TwistMsg>::SharedPtr twist_subscription_;
 };
 
