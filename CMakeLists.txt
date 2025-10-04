@@ -61,6 +61,9 @@ if("$ENV{ROS_VERSION}" STREQUAL "2")
     PLUGIN "${PROJECT_NAMESPACE}::ros2::PoseTransformerNode"
     EXECUTABLE "pose_transformer_node")
   rclcpp_components_register_node(${PROJECT_NAME}_lib
+    PLUGIN "${PROJECT_NAMESPACE}::ros2::PoseWithCovarianceTransformerNode"
+    EXECUTABLE "pose_with_covariance_transformer_node")
+  rclcpp_components_register_node(${PROJECT_NAME}_lib
     PLUGIN "${PROJECT_NAMESPACE}::ros2::TwistTransformerNode"
     EXECUTABLE "twist_transformer_node")
   rclcpp_components_register_node(${PROJECT_NAME}_lib
