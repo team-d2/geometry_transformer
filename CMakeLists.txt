@@ -69,6 +69,9 @@ if("$ENV{ROS_VERSION}" STREQUAL "2")
   rclcpp_components_register_node(${PROJECT_NAME}_lib
     PLUGIN "${PROJECT_NAMESPACE}::ros2::PathTransformerNode"
     EXECUTABLE "path_transformer_node")
+  rclcpp_components_register_node(${PROJECT_NAME}_lib
+    PLUGIN "${PROJECT_NAMESPACE}::ros2::PointCloudTransformerNode"
+    EXECUTABLE "point_cloud_transformer_node")
 endif()
 
 # test
