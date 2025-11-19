@@ -22,6 +22,7 @@
 
 #include "create_tf_listener.hpp"
 #include "sensor_msgs/msg/point_cloud2.hpp"
+#include "sensor_msgs/point_cloud2_iterator.hpp"
 #include "rclcpp/node.hpp"
 #include "geometry_msgs/msg/transform_stamped.hpp"
 #include "tf2_ros/buffer.h"
@@ -88,17 +89,17 @@ private:
       rclcpp::QosPolicyKind::Depth, rclcpp::QosPolicyKind::Durability,
       rclcpp::QosPolicyKind::History, rclcpp::QosPolicyKind::Reliability};
     return this->create_subscription<PointCloudMsg>(
-      "points", rclcpp::QoS(10), [this](PointCloudMsg::ConstSharedPtr msg) {this->transform(std::move(msg));},
+      "points", rclcpp::QoS(10), [this](PointCloudMsg::UniquePtr msg) {this->transform(std::move(msg));},
       subscription_options);
   }
 
-  void transform(PointCloudMsg::ConstSharedPtr point_cloud_msg)
+  void transform(PointCloudMsg::UniquePtr points_msg)
   {
     // get header tf
     geometry_msgs::msg::TransformStamped point_cloud_base_tf_msg;
     try {
       point_cloud_base_tf_msg =
-        tf_buffer_.lookupTransform(frame_id_, point_cloud_msg->header.frame_id, point_cloud_msg->header.stamp);
+        tf_buffer_.lookupTransform(frame_id_, points_msg->header.frame_id, points_msg->header.stamp);
     } catch (const tf2::TransformException & ex) {
       RCLCPP_ERROR_ONCE(this->get_logger(), "Failed to get transform: %s", ex.what());
       return;
@@ -117,21 +118,27 @@ private:
     point_cloud_base_tf.linear() = q.toRotationMatrix();
 
     // transform point cloud
-    pcl::PointCloud<pcl::PointXYZ> pcl_point_cloud;
-    pcl::fromROSMsg(*point_cloud_msg, pcl_point_cloud);
-    pcl::PointCloud<pcl::PointXYZ> pcl_point_cloud_transformed;
-    pcl::transformPointCloud(
-      pcl_point_cloud, pcl_point_cloud_transformed,
-      point_cloud_base_tf.matrix());
+    points_msg->header.frame_id = frame_id_;
 
-    auto point_cloud_transformed_msg = std::make_unique<PointCloudMsg>();
-    pcl::toROSMsg(
-      pcl_point_cloud_transformed,
-      *point_cloud_transformed_msg);
-    point_cloud_transformed_msg->header.frame_id = frame_id_;
+    sensor_msgs::PointCloud2Iterator<float> points_x_itr(*points_msg, "x");
+    sensor_msgs::PointCloud2Iterator<float> points_y_itr(*points_msg, "y");
+    sensor_msgs::PointCloud2Iterator<float> points_z_itr(*points_msg, "z");
+
+    while (points_x_itr != points_x_itr.end()) {
+      Eigen::Vector3f point_in_source_frame(*points_x_itr, *points_y_itr, *points_z_itr);
+      Eigen::Vector3f point_in_target_frame = point_cloud_base_tf * point_in_source_frame;
+
+      *points_x_itr = point_in_target_frame.x();
+      *points_y_itr = point_in_target_frame.y();
+      *points_z_itr = point_in_target_frame.z();
+
+      ++points_x_itr;
+      ++points_y_itr;
+      ++points_z_itr;
+    }
 
     // publish the point_cloud in the target frame
-    point_cloud_frame_changed_publisher_->publish(std::move(point_cloud_transformed_msg));
+    point_cloud_frame_changed_publisher_->publish(std::move(points_msg));
   }
 
   // parameter
